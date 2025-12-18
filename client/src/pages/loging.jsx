@@ -22,8 +22,16 @@ const Login = ({ setToken, setRole }) => {
 
       setToken(token);
       setRole(decoded.role);
+
+      localStorage.setItem("token", token);
+    localStorage.setItem("role", decoded.role);
+
     } catch (err) {
-      setError("Invalid email or password");
+     const msg =
+      err.response?.data?.msg ||
+      err.response?.data?.errors?.[0]?.msg ||
+      "Invalid email or password";
+    setError(msg);
     }
   };
 

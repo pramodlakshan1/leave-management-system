@@ -5,6 +5,7 @@ const {
   getMyLeaves,
   getAllLeaves,
   updateLeaveStatus,
+  getPendingLeaves 
 } = require('../controller/leaveController');
 const { authMiddleware, roleMiddleware } = require('../midlware/auth');
 
@@ -24,7 +25,11 @@ router.post(
 
 router.get('/my-leaves', authMiddleware, roleMiddleware('employee'), getMyLeaves);
 
+// Get all leaves (for admin)
 router.get('/all', authMiddleware, roleMiddleware('admin'), getAllLeaves);
+
+// Get only pending leaves (for admin dashboard)
+router.get('/admin/pending', authMiddleware, roleMiddleware('admin'), getPendingLeaves);
 
 router.put(
   '/:id/status',

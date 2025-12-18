@@ -18,7 +18,7 @@ const EmployeeDashboard = ({ token }) => {
   // 1. Fetch Leaves from Backend
   const fetchLeaves = async () => {
     try {
-      const res = await axios.get('http://localhost:5000/leaves/my-leaves', {
+      const res = await axios.get('http://localhost:5001/leaves/my-leaves', {
         headers: { Authorization: `Bearer ${token}` }
       });
       setLeaves(res.data);
@@ -37,7 +37,7 @@ const EmployeeDashboard = ({ token }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      await axios.post('http://localhost:5000/leaves/apply', formData, {
+      await axios.post('http://localhost:5001/leaves', formData, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setShowModal(false);

@@ -7,7 +7,6 @@ const AdminDashboard = ({ token }) => {
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState({ type: '', text: '' });
 
-  // 1. Fetch only pending leaves
   const fetchPendingRequests = async () => {
     try {
       const res = await axios.get('http://localhost:5001/leaves/admin/pending', {
@@ -17,6 +16,7 @@ const AdminDashboard = ({ token }) => {
       setLoading(false);
     } catch (err) {
       console.error("Error fetching requests", err);
+      setMessage({ type: 'danger', text: 'Failed to load pending requests' });
       setLoading(false);
     }
   };
@@ -25,22 +25,25 @@ const AdminDashboard = ({ token }) => {
     fetchPendingRequests();
   }, []);
 
-  // 2. Handle Approve/Reject Actions
   const handleAction = async (id, newStatus) => {
     try {
-      await axios.put(`http://localhost:5001/leaves/admin/update/${id}`, 
+      await axios.put(`http://localhost:5001/leaves/${id}/status`, 
         { status: newStatus },
         { headers: { Authorization: `Bearer ${token}` } }
       );
       
-      // Show success message and refresh list
-      setMessage({ type: 'success', text: `Request successfully ${newStatus}!` });
+      setMessage({ 
+        type: 'success', 
+        text: `Request successfully ${newStatus}!` 
+      });
       fetchPendingRequests();
       
-      // Clear message after 3 seconds
       setTimeout(() => setMessage({ type: '', text: '' }), 3000);
     } catch (err) {
-      setMessage({ type: 'danger', text: 'Failed to update request.' });
+      setMessage({ 
+        type: 'danger', 
+        text: 'Failed to update request. Please try again.' 
+      });
     }
   };
 
@@ -49,8 +52,17 @@ const AdminDashboard = ({ token }) => {
       <Container>
         <Row className="mb-4">
           <Col>
-            <h2 className="fw-bold">Admin Management</h2>
+            <h2 className="fw-bold">Admin Dashboard</h2>
             <p className="text-muted">Review and manage employee leave requests</p>
+          </Col>
+          <Col className="text-end">
+            <Button 
+              variant="outline-primary" 
+              onClick={fetchPendingRequests}
+              disabled={loading}
+            >
+              Refresh
+            </Button>
           </Col>
         </Row>
 
@@ -61,63 +73,92 @@ const AdminDashboard = ({ token }) => {
         )}
 
         <Card className="shadow-sm border-0">
-          <Card.Header className="bg-white py-3">
+          <Card.Header className="bg-white py-3 d-flex justify-content-between align-items-center">
             <h5 className="mb-0 text-primary">Pending Approvals</h5>
+            <Badge bg="warning" pill>
+              {pendingLeaves.length} Request{pendingLeaves.length !== 1 ? 's' : ''}
+            </Badge>
           </Card.Header>
           <Card.Body className="p-0">
             <Table responsive hover className="mb-0 align-middle">
               <thead className="table-light">
                 <tr>
-                  <th>Employee ID</th>
+                  <th>Employee</th>
                   <th>Dates</th>
                   <th>Days</th>
                   <th>Reason</th>
+                  <th>Submitted</th>
                   <th className="text-center">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {loading ? (
                   <tr>
-                    <td colSpan="5" className="text-center py-5">
+                    <td colSpan="6" className="text-center py-5">
                       <Spinner animation="border" variant="primary" />
+                      <p className="mt-2 text-muted">Loading pending requests...</p>
                     </td>
                   </tr>
                 ) : pendingLeaves.length === 0 ? (
                   <tr>
-                    <td colSpan="5" className="text-center py-5 text-muted">
-                      No pending requests at this time.
+                    <td colSpan="6" className="text-center py-5 text-muted">
+                      <i className="bi bi-check-circle-fill fs-4 text-success"></i>
+                      <p className="mt-2">No pending requests. All caught up!</p>
                     </td>
                   </tr>
                 ) : (
                   pendingLeaves.map((leave) => (
                     <tr key={leave._id}>
                       <td>
-                        <span className="fw-bold text-dark">{leave.user?.name || "User ID: " + leave.user}</span>
+                        <div>
+                          <strong>{leave.user?.name || 'Unknown User'}</strong>
+                          <br />
+                          <small className="text-muted">{leave.user?.email || 'No email'}</small>
+                        </div>
+                      </td>
+                      <td>
+                        <div>
+                          <strong>{new Date(leave.startDate).toLocaleDateString()}</strong>
+                          <br />
+                          <small>to</small>
+                          <br />
+                          <strong>{new Date(leave.endDate).toLocaleDateString()}</strong>
+                        </div>
+                      </td>
+                      <td>
+                        <Badge bg="info" className="fs-6">{leave.totalDays}</Badge>
+                        <br />
+                        <small>day{leave.totalDays !== 1 ? 's' : ''}</small>
+                      </td>
+                      <td>
+                        <div className="reason-cell" style={{ maxWidth: '250px' }}>
+                          {leave.reason}
+                        </div>
                       </td>
                       <td>
                         <small className="text-muted">
-                          {new Date(leave.startDate).toLocaleDateString()} - {new Date(leave.endDate).toLocaleDateString()}
+                          {new Date(leave.createdAt).toLocaleDateString()}
                         </small>
                       </td>
-                      <td><Badge bg="info" text="dark">{leave.totalDays} Days</Badge></td>
-                      <td><div className="text-truncate" style={{maxWidth: '200px'}}>{leave.reason}</div></td>
                       <td className="text-center">
-                        <Button 
-                          variant="success" 
-                          size="sm" 
-                          className="me-2 px-3"
-                          onClick={() => handleAction(leave._id, 'approved')}
-                        >
-                          Approve
-                        </Button>
-                        <Button 
-                          variant="danger" 
-                          size="sm" 
-                          className="px-3"
-                          onClick={() => handleAction(leave._id, 'rejected')}
-                        >
-                          Reject
-                        </Button>
+                        <div className="d-flex justify-content-center gap-2">
+                          <Button 
+                            variant="success" 
+                            size="sm"
+                            onClick={() => handleAction(leave._id, 'approved')}
+                            className="px-3"
+                          >
+                            <i className="bi bi-check-circle me-1"></i> Approve
+                          </Button>
+                          <Button 
+                            variant="outline-danger" 
+                            size="sm"
+                            onClick={() => handleAction(leave._id, 'rejected')}
+                            className="px-3"
+                          >
+                            <i className="bi bi-x-circle me-1"></i> Reject
+                          </Button>
+                        </div>
                       </td>
                     </tr>
                   ))
